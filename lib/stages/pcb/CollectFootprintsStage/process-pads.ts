@@ -2,6 +2,7 @@ import type { Footprint } from "kicadts"
 import { applyToPoint } from "transformation-matrix"
 import type { ConverterContext } from "../../../types"
 import { determinePadLayer } from "./layer-utils"
+import type { PcbSmtPad, PcbSmtPadRect } from "circuit-json"
 
 /**
  * Processes all pads in a footprint and creates Circuit JSON pad elements
@@ -84,7 +85,14 @@ export function processPad(
 
   // Determine pad type and create appropriate CJ element
   if (padType === "smd") {
-    createSmdPad(ctx, pad, componentId, globalPos, size, padShape)
+    createSmdPad({
+      ctx,
+      pad,
+      componentId,
+      pos: globalPos,
+      size,
+      shape: padShape,
+    })
   } else if (padType === "np_thru_hole") {
     createNpthHole(ctx, pad, componentId, globalPos, drill)
   } else {
@@ -105,27 +113,44 @@ export function processPad(
 /**
  * Creates an SMD pad in Circuit JSON
  */
-export function createSmdPad(
-  ctx: ConverterContext,
-  pad: any,
-  componentId: string,
-  pos: { x: number; y: number },
-  size: { x: number; y: number },
-  shape: string,
-) {
+export function createSmdPad({
+  ctx,
+  pad,
+  componentId,
+  pos,
+  size,
+  shape,
+}: {
+  ctx: ConverterContext
+  pad: any
+  componentId: string
+  pos: { x: number; y: number }
+  size: { x: number; y: number }
+  shape: string
+}) {
   const layers = pad.layers || []
   const layer = determinePadLayer(layers)
 
-  ctx.db.pcb_smtpad.insert({
+  let smtpad: PcbSmtPad = {
+    type: "pcb_smtpad",
+    pcb_smtpad_id: "",
     pcb_component_id: componentId,
     x: pos.x,
     y: pos.y,
     layer: layer,
-    shape: shape === "circle" ? "circle" : "rect",
-    width: size.x,
-    height: size.y,
     port_hints: [pad.number?.toString()],
-  } as any)
+  } as PcbSmtPad
+
+  const roundrectRatio = pad._sxRoundrectRatio?.value ?? pad.roundrect_rratio
+  if (shape === "roundrect" && roundrectRatio !== undefined) {
+    // KiCad's roundrect_rratio is the ratio of the corner radius to half the smaller dimension
+    // Formula: corner_radius = min(width, height) * roundrect_rratio / 2
+    const minDimension = Math.min(size.x, size.y)
+    const cornerRadius = (minDimension * roundrectRatio) / 2
+    ;(smtpad as PcbSmtPadRect).corner_radius = cornerRadius
+  }
+
+  ctx.db.pcb_smtpad.insert(smtpad)
 
   if (ctx.stats) {
     ctx.stats.pads = (ctx.stats.pads || 0) + 1
