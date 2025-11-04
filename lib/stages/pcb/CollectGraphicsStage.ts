@@ -87,7 +87,7 @@ export class CollectGraphicsStage extends ConverterStage {
 
       // Keep finding connected segments until we can't find any more
       while (remainingSegments.length > 0) {
-        const lastSegment = orderedSegments[orderedSegments.length - 1]
+        const lastSegment = orderedSegments[orderedSegments.length - 1]!
         const lastEnd = lastSegment.end
 
         // Find a segment that starts where the last one ended
@@ -101,7 +101,7 @@ export class CollectGraphicsStage extends ConverterStage {
             this.pointsEqualKicad(seg.end, lastEnd),
           )
           if (foundIndex !== -1) {
-            const seg = remainingSegments[foundIndex]
+            const seg = remainingSegments[foundIndex]!
             // Reverse the segment
             orderedSegments.push({
               start: seg.end,
@@ -113,7 +113,7 @@ export class CollectGraphicsStage extends ConverterStage {
         }
 
         if (foundIndex !== -1) {
-          orderedSegments.push(remainingSegments.splice(foundIndex, 1)[0])
+          orderedSegments.push(remainingSegments.splice(foundIndex, 1)[0]!)
         } else {
           // Can't find a connected segment, just add the next one
           orderedSegments.push(remainingSegments.shift()!)
@@ -139,7 +139,7 @@ export class CollectGraphicsStage extends ConverterStage {
 
     // Add the last endpoint if needed (for unclosed paths)
     if (orderedSegments.length > 0) {
-      const lastSegment = orderedSegments[orderedSegments.length - 1]
+      const lastSegment = orderedSegments[orderedSegments.length - 1]!
       const endPos = applyToPoint(this.ctx.k2cMatPcb, {
         x: lastSegment.end.x,
         y: lastSegment.end.y,
