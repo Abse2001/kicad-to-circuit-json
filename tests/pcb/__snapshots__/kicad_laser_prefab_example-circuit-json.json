@@ -174,7 +174,7 @@
     "hole_diameter": 0.3,
     "layers": [
       "top",
-      "top"
+      "bottom"
     ]
   },
   {
